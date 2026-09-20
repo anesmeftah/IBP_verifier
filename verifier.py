@@ -33,7 +33,21 @@ class IBPVerifier:
         for node in graph.node:
             if node.op_type == "Gemm":
                 W = initializers[node.input[1]]
-                b = initializers[node.input[2]] if len(node.input) > 2 else np.zeros(W.shape[0])
+
+
+                transB = 0
+                for attr in node.attribute:
+                    if attr.name == "transB":
+                        transB = attr.i
+                if transB:
+                    W = W.T
+
+                # Create the bias after W shape
+                if len(node.input) > 2:
+                    b = initializers[node.input[2]]
+                else:
+                    b = np.zeros(W.shape[0])
+
                 layers.append({
                 "type": "Linear",
                 "weights": W,
