@@ -1,5 +1,6 @@
 import onnx 
 from onnx import numpy_helper
+import numpy as np
 
 
 
@@ -23,7 +24,7 @@ class IBPVerifier:
         graph = model.graph
 
         initializers = {}
-        for init in graph.initializers:
+        for init in graph.initializer:
             initializers[init.name] = numpy_helper.to_array(init)
 
 
@@ -32,8 +33,7 @@ class IBPVerifier:
         for node in graph.node:
             if node.op_type == "Gemm":
                 W = initializers[node.input[1]]
-                b = initializers[node.input[2]]
-
+                b = initializers[node.input[2]] if len(node.input) > 2 else np.zeros(W.shape[0])
                 layers.append({
                 "type": "Linear",
                 "weights": W,
@@ -53,36 +53,24 @@ class IBPVerifier:
 
 
     def Interval(self ,lower , upper , layer):
-        """Interval Calculator"""
-
-        z_upper = 0
-        z_lower = 0
+        """Vectorized Interval Calculator"""
 
         # Linear Layer
         if layer["type"] == "Linear":
             weights = layer["weights"]
             bias = layer["bias"]
 
-            # calculate upper
-            for i in range(0, len(weights)):
-                if weights[i] < 0 :
-                    z_upper = z_upper + weights[i] * lower + bias
-                    z_lower = z_lower + weights[i] * upper + bias
-                else :
-                    z_upper = z_upper + weights[i] * upper + bias
-                    z_lower = z_lower + weights[i] * lower + bias
+            # Seperate positive and negative weight components
+            w_pos = np.maximum(weights , 0)
+            w_neg = np.minimum(weights , 0)
+
+            z_upper = w_pos @ upper + w_neg @ lower + bias
+            z_lower = w_pos @ lower + w_neg @ upper + bias
 
         # ReLU Layer
-        else:
-            if lower > 0 :
-                return lower , upper
-            elif upper < 0 : 
-                return 0 , 0
-            else:
-                z_upper = (2/3) * upper + 4/3
-
-                z_lower = 0
-
+        elif layer["type"] == "ReLU":
+            z_upper = np.maximum(0, upper)
+            z_lower = np.maximum(0, lower)
 
         return z_lower , z_upper
 
@@ -92,6 +80,9 @@ class IBPVerifier:
 
         for layer in self.layers:
             lower , upper = self.Interval(lower , upper , layer)
+
+
+        return lower , upper
 
 
 
