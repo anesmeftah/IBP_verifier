@@ -34,15 +34,6 @@ class IBPVerifier:
             if node.op_type == "Gemm":
                 W = initializers[node.input[1]]
 
-
-                transB = 0
-                for attr in node.attribute:
-                    if attr.name == "transB":
-                        transB = attr.i
-                if transB:
-                    W = W.T
-
-                # Create the bias after W shape
                 if len(node.input) > 2:
                     b = initializers[node.input[2]]
                 else:
@@ -77,6 +68,12 @@ class IBPVerifier:
             # Seperate positive and negative weight components
             w_pos = np.maximum(weights , 0)
             w_neg = np.minimum(weights , 0)
+
+            # for debug
+            # print("w_pos : " , w_pos.shape)
+            # print("w_neg : " , w_neg.shape)
+            # print("upper : " , upper.shape)
+            # print("lower : " , lower.shape)
 
             z_upper = w_pos @ upper + w_neg @ lower + bias
             z_lower = w_pos @ lower + w_neg @ upper + bias
