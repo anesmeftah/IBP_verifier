@@ -10,16 +10,40 @@ This will make the maths and the implementation easier as a first version implem
 """
 
 class IBPVerifier:
-    def __init__(self , model):
-        """initiate the Verifier. Requires .onnx model path"""
-        self.layers = self.extract_layers(model)
+    def __init__(self , model = None , weights = None , bias = None):
+        """initiate the Verifier. Requires .onnx model path or input manual weights and bias for one layer"""
+
+        if model is not None:
+            self.layers = self.extract_layers(model)
+
+        elif weights is not None:
+            if bias is None:
+                bias = np.zeros(weights.shape[0])
+
+            else:
+                if weights.shape[0] != bias.shape[0]:
+                    ValueError("Weights and bias don't have compatible shapes")
+
+
+            self.layers = [{
+                "type" : "Linear",
+                "weights" : np.asarray(weights),
+                "bias" : np.asarray(bias)
+            }]
+
+            
+                
+        else:
+            raise ValueError("Provide either model path or weights")
+
+                
 
 
     def extract_layers(self , onnx_path):
         """
         Extract layers and parameters from the model.
         """
-
+        
         model = onnx.load(onnx_path)
         graph = model.graph
 
@@ -57,8 +81,9 @@ class IBPVerifier:
 
 
 
-    def Interval(self ,lower , upper , layer):
+    def propagate_interval(self ,lower , upper , layer = {"type" : "Linear"}):
         """Vectorized Interval Calculator"""
+
 
         # Linear Layer
         if layer["type"] == "Linear":
@@ -90,12 +115,10 @@ class IBPVerifier:
         upper = x + eps
 
         for layer in self.layers:
-            lower , upper = self.Interval(lower , upper , layer)
+            lower , upper = self.propagate_interval(lower , upper , layer)
 
 
         return lower , upper
-
-
 
 
 
