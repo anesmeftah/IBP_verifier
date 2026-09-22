@@ -103,6 +103,9 @@ class IBPVerifier:
             z_upper = w_pos @ upper + w_neg @ lower + bias
             z_lower = w_pos @ lower + w_neg @ upper + bias
 
+            print("z_upper : " , z_upper)
+            print("z_lower : " , z_lower)
+
         # ReLU Layer
         elif layer["type"] == "ReLU":
             z_upper = np.maximum(0, upper)
@@ -113,6 +116,10 @@ class IBPVerifier:
     def forward(self , x , eps):
         lower = x - eps
         upper = x + eps
+
+        print("lower : " , lower)
+        print("upper : " , upper)
+
 
         for layer in self.layers:
             lower , upper = self.propagate_interval(lower , upper , layer)
