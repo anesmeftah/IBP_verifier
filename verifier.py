@@ -10,7 +10,7 @@ This will make the maths and the implementation easier as a first version implem
 """
 
 class IBPVerifier:
-    def __init__(self , model = None , weights = None , bias = None):
+    def __init__(self , model = None , weights = None , bias = None , Type = "Linear"):
         """initiate the Verifier. Requires .onnx model path or input manual weights and bias for one layer"""
 
         if model is not None:
@@ -26,9 +26,14 @@ class IBPVerifier:
 
 
             self.layers = [{
-                "type" : "Linear",
+                "type" : Type,
                 "weights" : np.asarray(weights),
                 "bias" : np.asarray(bias)
+            }]
+
+        elif Type == "ReLU":
+            self.layers = [{
+                "type" : Type
             }]
 
             
